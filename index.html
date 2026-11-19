@@ -50,6 +50,7 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .task:hover{background:var(--bg)}
 .task input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--accent)}
 .task span.t{flex:1;min-width:0}
+.with{display:block;color:var(--muted);font-size:12px}
 .task .b{font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;flex:none}
 .task.done span.t{text-decoration:line-through;color:var(--muted)}
 .status{font-size:13px;color:var(--muted);margin-top:12px}
@@ -75,7 +76,7 @@ tr.now td.day{box-shadow:inset 3px 0 0 var(--accent)}
 <div class="wrap">
 <header>
   <h1>Домашние дела</h1>
-  <p class="sub">Четыре человека, по 6 баллов в день каждому. Ответственные меняются по кругу каждую неделю.</p>
+  <p class="sub">Четыре человека, по 6 баллов в день каждому. Наборы заданий переходят к следующему человеку каждый день.</p>
 </header>
 <nav class="tabs" role="tablist" aria-label="Разделы">
   <button class="tab" role="tab" id="tab-today" aria-selected="true" data-v="today">Сегодня</button>
@@ -88,35 +89,36 @@ tr.now td.day{box-shadow:inset 3px 0 0 var(--accent)}
 <script>
 const PEOPLE=[["Хамдия","p0"],["Ханифа","p1"],["Хаммад","p2"],["Аят","p3"]];
 const TASKS={
-  dish:["Мытьё посуды",6], trash:["Выброс мусора",1], water:["Принести воды",2], vac:["Пылесос",2],
-  cat:["Уход за кошкой",1], table:["Уборка стола",2], sink:["Мытьё раковин, туалета, зеркал, сантехники",3],
-  laundry:["Развешивание белья и глажка",1], room:["Уборка в своей комнате",2],
-  cook:["Готовка еды и хлеб",3], fridge:["Мытьё холодильника, уборка поверхностей",2]};
-const ORDER=["dish","cook","sink","vac","fridge","water","table","room","laundry","cat","trash"];
-// Шаблон недели: день (Пн..Вс) -> 4 набора задач ("позиции"). Позиции сдвигаются между людьми каждую неделю.
-const SCHEDULE=[
- [['dish'],['table','fridge','room'],['water','vac','trash','laundry'],['cook','room','cat']],
- [['cook','room','trash'],['sink','fridge','cat'],['dish'],['water','table','room']],
- [['dish'],['water','vac','room'],['table','room','trash','cat'],['cook','room','laundry']],
- [['water','fridge','room'],['cook','room','cat'],['dish'],['sink','table','trash']],
- [['water','room','cat','laundry'],['cook','room','trash'],['table','vac','room'],['dish']],
- [['water','table','room'],['dish'],['vac','room','trash','cat'],['cook','sink']],
- [['sink','water','cat'],['dish'],['table','fridge','room'],['cook','room','trash']]];
+  dishAM:["Мытьё посуды до обеда",3], dishPM:["Мытьё посуды после обеда",3], trash:["Выброс мусора",1],
+  water:["Принести воды",2], vac:["Пылесос",2], cat:["Уход за кошкой",1], table:["Уборка стола",2],
+  sink:["Мытьё раковин, туалета, зеркал, сантехники",3], laundry:["Развешивание белья и глажка",1],
+  room:["Уборка в своей комнате",2], cook:["Готовка еды и хлеб",3], fridge:["Мытьё холодильника, уборка поверхностей",2]};
+const ORDER=["dishAM","dishPM","cook","trash","water","cat","table","room","sink","laundry","fridge","vac"];
+const FREQ={dishAM:["1 человек","каждый день"],dishPM:["1 человек","каждый день"],cook:["1 человек","каждый день"],
+  trash:["2 человека вместе","каждый день"],water:["2 человека вместе","каждый день"],cat:["1 человек","каждый день"],
+  table:["1 человек","каждый день"],room:["2 человека (каждый свою комнату)","каждый день"],
+  sink:["1 человек","раз в 4 дня"],laundry:["1 человек","раз в 4 дня"],fridge:["1 человек","раз в 4 дня"],vac:["1 человек","раз в 4 дня"]};
+// Цикл из 4 дней. В каждом дне 4 набора по 6 баллов. Набор переходит к следующему человеку каждый день.
+const CYCLE=[
+ [['trash','water','dishAM'],['trash','water','dishPM'],['cook','sink'],['table','cat','laundry','room']],
+ [['trash','water','dishAM'],['trash','water','dishPM'],['cook','room','cat'],['table','fridge','room']],
+ [['trash','water','dishAM'],['trash','water','dishPM'],['cook','room','cat'],['table','vac','room']],
+ [['trash','dishAM','room'],['trash','dishPM','room'],['water','cook','cat'],['water','table','room']]];
 const DAYS=["Понедельник","Вторник","Среда","Четверг","Пятница","Суббота","Воскресенье"];
 const SHORT=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
 const MONTHS=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
-const REF=new Date(2026,10,16); // понедельник первой недели
+const REF=new Date(2026,10,16); // первый день цикла
 
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const addDays=(d,n)=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);return x};
 const dow=d=>(d.getDay()+6)%7;
 const monday=d=>addDays(d,-dow(d));
-const weekIdx=d=>Math.round((monday(d)-REF)/(7*864e5));
+const dayN=d=>Math.round((d-REF)/864e5);
 const fmt=d=>d.getDate()+" "+MONTHS[d.getMonth()];
-// Кто в какой позиции: позиция s в неделе w достаётся человеку (s+w) mod 4
+// Набор слота s в день n достаётся человеку (s+n+цикл) mod 4: за 4 дня каждый проходит все наборы
 function assign(d){
-  const w=weekIdx(d),sched=SCHEDULE[dow(d)];
-  return PEOPLE.map((_,p)=>{const s=(((p-w)%4)+4)%4;return sched[s];});
+  const n=dayN(d),c=Math.floor(n/4),day=CYCLE[((n%4)+4)%4];
+  return PEOPLE.map((_,p)=>day[(((p-n-c)%4)+4)%4]);
 }
 const sumPts=l=>l.reduce((a,k)=>a+TASKS[k][1],0);
 
@@ -135,10 +137,15 @@ function toggle(k,on){
   if(dbCol){const r=dbCol.doc(k); (on?r.set({v:1}):r.delete()).catch(()=>{loadNote="Не удалось отправить отметку другим. Она сохранена только на этом устройстве.";render()});}
 }
 
+function partner(d,p,t){
+  if(t!=="trash"&&t!=="water")return "";
+  const o=assign(d).map((l,i)=>l.includes(t)&&i!==p?PEOPLE[i][0]:null).filter(Boolean);
+  return o.length?`<small class="with">вместе с ${o.join(", ")}</small>`:"";
+}
 function personTasks(d,p,list){
   return list.map(t=>{
     const k=key(d,p,t), on=done.has(k);
-    return `<label class="task${on?" done":""}"><input type="checkbox" data-k="${k}" ${on?"checked":""}><span class="t">${TASKS[t][0]}</span><span class="b">${TASKS[t][1]}</span></label>`;
+    return `<label class="task${on?" done":""}"><input type="checkbox" data-k="${k}" ${on?"checked":""}><span class="t">${TASKS[t][0]}${partner(d,p,t)}</span><span class="b">${TASKS[t][1]}</span></label>`;
   }).join("");
 }
 function renderToday(){
@@ -171,18 +178,13 @@ function renderWeek(){
     });
     h+="</tr>";
   }
-  return h+`</tbody></table></div><p class="note">Число рядом с заданием показывает баллы. Каждый человек получает ровно 6 баллов в день. Со следующей недели все сдвигаются на один шаг по кругу: у каждого меняются дни мытья посуды и остальные задания.</p>`;
+  return h+`</tbody></table></div><p class="note">Число рядом с заданием показывает баллы. Каждый человек получает ровно 6 баллов в день. Каждый день наборы заданий сдвигаются на одного человека, и через 4 дня каждый успевает сделать всё по разу. Мытьё раковин и туалета, бельё, холодильник и пылесос идут раз в 4 дня.</p>`;
 }
 function renderRules(){
-  const cnt={};ORDER.forEach(t=>cnt[t]=[]);
-  SCHEDULE.forEach((day,i)=>{const seen={};day.forEach(g=>g.forEach(t=>{seen[t]=(seen[t]||0)+1}));Object.keys(seen).forEach(t=>cnt[t].push({i,n:seen[t]}))});
-  let tot=0;
-  const rows=ORDER.map(t=>{const times=cnt[t].reduce((s,x)=>s+x.n,0);tot+=times*TASKS[t][1];
-    const days=cnt[t].map(x=>SHORT[x.i]).join(", ");
-    const note=t==="room"?"каждый убирает свою комнату, 4 раза в неделю":days;
-    return `<tr><td>${TASKS[t][0]}</td><td class="n">${TASKS[t][1]}</td><td class="n">${t==="room"?"4 у каждого":times}</td><td>${t==="room"?"каждый день у кого-то, по очереди":days}</td></tr>`}).join("");
-  return `<div class="bar"><h2>Задания и баллы</h2></div><div class="scroll rules"><table><thead><tr><th>Задание</th><th>Баллы</th><th>Раз в неделю</th><th>Дни</th></tr></thead><tbody>${rows}</tbody></table></div>
-   <p class="note">За неделю набирается ${tot} баллов: 4 человека × 6 баллов × 7 дней. Если нужно поменять частоту или баллы, скажи, и я пересчитаю расписание.</p>`;
+  const rows=ORDER.map(t=>`<tr><td>${TASKS[t][0]}</td><td class="n">${TASKS[t][1]}</td><td>${FREQ[t][0]}</td><td>${FREQ[t][1]}</td></tr>`).join("");
+  const tot=CYCLE.flat().reduce((s,g)=>s+sumPts(g),0);
+  return `<div class="bar"><h2>Задания и баллы</h2></div><div class="scroll rules"><table><thead><tr><th>Задание</th><th>Баллы</th><th>Кто делает</th><th>Как часто</th></tr></thead><tbody>${rows}</tbody></table></div>
+   <p class="note">Баллы указаны на каждого человека. Мусор и вода делаются вдвоём, и оба получают полные баллы. Посуда: 3 балла утром и 3 балла после обеда. За 4 дня набирается ${tot} баллов: 4 человека × 6 баллов × 4 дня.</p>`;
 }
 function render(){
   document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===view));
