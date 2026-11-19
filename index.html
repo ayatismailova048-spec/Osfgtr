@@ -50,7 +50,6 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .task:hover{background:var(--bg)}
 .task input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--accent)}
 .task span.t{flex:1;min-width:0}
-.with{display:block;color:var(--muted);font-size:12px}
 .task .b{font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;flex:none}
 .task.done span.t{text-decoration:line-through;color:var(--muted)}
 .status{font-size:13px;color:var(--muted);margin-top:12px}
@@ -137,15 +136,10 @@ function toggle(k,on){
   if(dbCol){const r=dbCol.doc(k); (on?r.set({v:1}):r.delete()).catch(()=>{loadNote="Не удалось отправить отметку другим. Она сохранена только на этом устройстве.";render()});}
 }
 
-function partner(d,p,t){
-  if(t!=="trash"&&t!=="water")return "";
-  const o=assign(d).map((l,i)=>l.includes(t)&&i!==p?PEOPLE[i][0]:null).filter(Boolean);
-  return o.length?`<small class="with">вместе с ${o.join(", ")}</small>`:"";
-}
 function personTasks(d,p,list){
   return list.map(t=>{
     const k=key(d,p,t), on=done.has(k);
-    return `<label class="task${on?" done":""}"><input type="checkbox" data-k="${k}" ${on?"checked":""}><span class="t">${TASKS[t][0]}${partner(d,p,t)}</span><span class="b">${TASKS[t][1]}</span></label>`;
+    return `<label class="task${on?" done":""}"><input type="checkbox" data-k="${k}" ${on?"checked":""}><span class="t">${TASKS[t][0]}</span><span class="b">${TASKS[t][1]}</span></label>`;
   }).join("");
 }
 function renderToday(){
