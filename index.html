@@ -113,23 +113,23 @@ const DEFHUE=[215,330,32,125];
 const HUES=[215,330,32,125,265,185,0,55];
 const TASKS={
   dishAM:["Мытьё посуды до обеда",3], dishPM:["Мытьё посуды после обеда",3], trash:["Выброс мусора",1],
-  water:["Принести воды",2], vac:["Пылесос",2], cat:["Уход за кошкой",1], table:["Уборка стола",2],
+  water:["Принести воды",2], vac:["Пылесос",2], cat:["Уход за кошкой",1], table:["Уборка стола и столешниц на кухне",2], stove:["Мытьё плиты",2],
   sink:["Мытьё раковин, туалета, зеркал, сантехники",3], laundry:["Развешивание белья и глажка",1],
   room:["Уборка в своей комнате",2], cook:["Готовка еды и хлеб",3], fridge:["Мытьё холодильника, уборка поверхностей",2]};
-const ORDER=["dishAM","dishPM","cook","trash","water","cat","table","room","sink","laundry","fridge","vac"];
+const ORDER=["dishAM","dishPM","cook","trash","water","cat","table","stove","room","sink","laundry","fridge","vac"];
 const FREQ={dishAM:["1 человек","каждый день"],dishPM:["1 человек","каждый день"],cook:["1 человек","каждый день"],
-  trash:["2 человека вместе","каждый день"],water:["2 человека вместе","каждый день"],cat:["1 человек","каждый день"],
-  table:["1 человек","каждый день"],room:["2 человека (каждый свою комнату)","каждый день"],
+  trash:["2 человека вместе","каждый день"],water:["2 человека вместе","через день"],cat:["1 человек","каждый день"],
+  table:["1 человек","каждый день"],stove:["1 человек","каждый день"],room:["2 человека (каждый свою комнату)","каждый день"],
   sink:["1 человек","раз в 4 дня"],laundry:["1 человек","раз в 4 дня"],fridge:["1 человек","раз в 4 дня"],vac:["1 человек","раз в 4 дня"]};
 // Срок выполнения (час дня), после которого невыполненное задание считается просроченным
 const DEADLINE={dishAM:13};
 const DEFAULT_DEADLINE=20;
 // Цикл из 4 дней. В каждом дне 4 набора по 6 баллов. Набор переходит к следующему человеку каждый день.
 const CYCLE=[
- [['trash','water','dishAM'],['trash','water','dishPM'],['cook','sink'],['table','cat','laundry','room']],
- [['trash','water','dishAM'],['trash','water','dishPM'],['cook','room','cat'],['table','fridge','room']],
- [['trash','water','dishAM'],['trash','water','dishPM'],['cook','room','cat'],['table','vac','room']],
- [['trash','dishAM','room'],['trash','dishPM','room'],['water','cook','cat'],['water','table','room']]];
+ [['dishAM','cook'],['dishPM','water','trash'],['table','stove','room'],['water','room','trash','cat']],
+ [['dishAM','cook'],['dishPM','sink'],['stove','room','trash','laundry'],['table','room','trash','cat']],
+ [['dishAM','cook'],['dishPM','water','trash'],['table','stove','room'],['water','room','trash','cat']],
+ [['dishAM','cook'],['dishPM','table','trash'],['stove','fridge','room'],['vac','room','trash','cat']]];
 const DAYS=["Понедельник","Вторник","Среда","Четверг","Пятница","Суббота","Воскресенье"];
 const SHORT=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
 const MONTHS=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
@@ -265,7 +265,7 @@ function renderRules(){
   const rows=ORDER.map(t=>`<tr><td>${TASKS[t][0]}</td><td class="n">${TASKS[t][1]}</td><td>${FREQ[t][0]}</td><td>${FREQ[t][1]}</td></tr>`).join("");
   const tot=CYCLE.flat().reduce((s,g)=>s+sumPts(g),0);
   return `<div class="bar"><h2>Задания и баллы</h2></div><div class="scroll rules"><table><thead><tr><th>Задание</th><th>Баллы</th><th>Кто делает</th><th>Как часто</th></tr></thead><tbody>${rows}</tbody></table></div>
-   <p class="note">Баллы указаны на каждого человека. Мусор и вода делаются вдвоём, и оба получают полные баллы. Посуда: 3 балла утром и 3 балла после обеда. За 4 дня набирается ${tot} баллов: 4 человека × 6 баллов × 4 дня.</p>`;
+   <p class="note">Баллы указаны на каждого человека. Мусор и вода делаются вдвоём, и оба получают полные баллы. Мусор выносят каждый день, воду приносят через день. Посуда: 3 балла утром и 3 балла после обеда. За 4 дня набирается ${tot} баллов: 4 человека × 6 баллов × 4 дня.</p>`;
 }
 function render(){
   const a=document.activeElement, el=document.getElementById("view");
