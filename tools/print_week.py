@@ -13,7 +13,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, PageBreak, Spacer
 
 root = Path(__file__).resolve().parent.parent
-src = (root / "index.html").read_text(encoding="utf-8")
+src = (root / "app" / "public" / "schedule.js").read_text(encoding="utf-8")
 TASKS = {k: (n, int(p)) for k, n, p in re.findall(r'(\w+):\["([^"]+)",(\d+)\]', src.split("const TASKS=")[1].split("};")[0])}
 cyc = src.split("const CYCLE=")[1].split(";\nconst DAYS")[0]
 CYCLE = eval(cyc.replace("'", '"'))

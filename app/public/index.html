@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8">
+<title>Домашние дела</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0f6f68">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: header and tabs, a role strip, then a 4-person grid for the day, a week table, and a rules table. Each person colors their own name. */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --ink:#16202a; --muted:#5d6b78; --line:#dde3e8;
+  --accent:#0f6f68; --accent-soft:#d9efec; --warn:#a4380f; --warn-soft:#fbe6dc; --ok:#1f7a45; --ok-soft:#dff3e6;
+  --pl:36%; --pls:92%;
+  --display:"Space Grotesk","Segoe UI",system-ui,sans-serif; --body:"Inter","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11171d; --surface:#1a232c; --ink:#e8eef3; --muted:#9aa9b6; --line:#2c3944;
+  --accent:#4fc4ba; --accent-soft:#17383a; --warn:#ff9b73; --warn-soft:#44231a; --ok:#6fd195; --ok-soft:#1b3a28;
+  --pl:72%; --pls:22%; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11171d; --surface:#1a232c; --ink:#e8eef3; --muted:#9aa9b6; --line:#2c3944;
+  --accent:#4fc4ba; --accent-soft:#17383a; --warn:#ff9b73; --warn-soft:#44231a; --ok:#6fd195; --ok-soft:#1b3a28;
+  --pl:72%; --pls:22%; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;
+  padding-block:0 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto}
+header{padding-block:18px 10px}
+h1{font:700 26px/1.1 var(--display);margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0}
+nav.tabs{display:flex;gap:6px;margin-block:14px;flex-wrap:wrap}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.tab{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:8px;font-weight:500}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .tab[aria-selected="true"]{color:#06201e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tab[aria-selected="true"]{color:#06201e}}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.pc{--h:215;color:hsl(var(--h) 62% var(--pl))}
+.pcs{background:hsl(var(--h) 70% var(--pls))}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.panel h3{font:700 15px var(--display);margin:0 0 6px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 12px}
+.btn.main{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn.main{color:#06201e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.main{color:#06201e}}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid transparent;background:hsl(var(--h) 62% var(--pl));padding:0}
+.sw[aria-pressed="true"]{border-color:var(--ink)}
+.tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.bar h2{font:700 20px/1.2 var(--display);margin:0;flex:1;min-width:180px}
+.nbtn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px}
+.today-pill{font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:99px;margin-left:8px;vertical-align:middle}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.who{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.name{font:700 18px/1.2 var(--display)}
+.pts{font-variant-numeric:tabular-nums;font-weight:600;font-size:13px;color:var(--muted)}
+.meter{height:6px;border-radius:9px;background:var(--line);overflow:hidden;margin-bottom:10px}
+.meter i{display:block;height:100%;width:0;transition:width .25s;background:hsl(var(--h) 62% var(--pl))}
+.task{display:flex;gap:10px;align-items:flex-start;padding:9px 6px;border-radius:8px;cursor:pointer;min-height:44px}
+.task:hover{background:var(--bg)}
+.task input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--accent)}
+.task.locked{cursor:default}.task.locked:hover{background:none}
+.task span.t{flex:1;min-width:0}
+.task .b{font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;flex:none}
+.task.done span.t{text-decoration:line-through;color:var(--muted)}
+.late{display:inline-block;margin-left:6px;font-size:11px;font-weight:600;color:var(--warn);background:var(--warn-soft);padding:1px 6px;border-radius:6px}
+.alert{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-weight:500}
+.msg{background:var(--accent-soft);border-radius:10px;padding:10px 12px;margin-bottom:14px}
+.msg .row{justify-content:space-between;flex-wrap:nowrap}
+.note-line{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);padding-top:6px}
+.note-form{display:flex;gap:6px;margin-top:10px}
+.note-form input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px}
+.status{font-size:13px;color:var(--muted);margin-top:12px}
+.sum{display:grid;gap:6px}
+.sum div{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:720px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+th{font:600 13px var(--body);color:var(--muted);background:var(--bg)}
+td.day{white-space:nowrap;font-weight:600}
+td.day small{display:block;font-weight:400;color:var(--muted)}
+tr.now td{background:var(--accent-soft)}
+tr.now td.day{box-shadow:inset 3px 0 0 var(--accent)}
+.chip{display:inline-block;margin:0 4px 4px 0;padding:2px 8px;border-radius:6px;font-size:13px}
+.chip b{font-variant-numeric:tabular-nums;margin-left:4px;opacity:.75}
+.hd{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;background:hsl(var(--h) 62% var(--pl))}
+.note{color:var(--muted);font-size:13px;margin:12px 0 0;max-width:70ch}
+.rules td.n{font-variant-numeric:tabular-nums}
+@media (max-width:520px){h1{font-size:23px}}
+@media (prefers-reduced-motion:reduce){.meter i{transition:none}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Домашние дела</h1>
+  <p class="sub">Четыре человека, по 6 баллов в день каждому. Наборы заданий переходят к следующему человеку каждый день.</p>
+</header>
+<nav class="tabs" role="tablist" aria-label="Разделы">
+  <button class="tab" role="tab" id="tab-today" aria-selected="true" data-v="today">Сегодня</button>
+  <button class="tab" role="tab" id="tab-week" aria-selected="false" data-v="week">Неделя</button>
+  <button class="tab" role="tab" id="tab-rules" aria-selected="false" data-v="rules">Задания и баллы</button>
+</nav>
+<div id="role"></div>
+<main id="view"></main>
+</div>
+
+
+<script src="/schedule.js"></script>
+<script>
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let me=null, vapid="", done=new Set(), colors={}, notes=[], notifyOn={}, note="", pending=false, pushMsg="", pushOn=false, loaded=false;
+let view="today", cur=new Date(); cur=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate());
+const today=new Date(cur);
+try{const v=localStorage.getItem("view"); if(["today","week","rules"].includes(v)) view=v}catch(e){}
+const hueOf=p=>typeof colors[p]==="number"?colors[p]:DEFHUE[p];
+const isDone=k=>done.has(k);
+const parent=()=>me&&me.role==="parent";
+const canTick=p=>parent()||(me&&me.person===p);
+async function api(url,body,method){
+  const r=await fetch(url,{method:method||(body?"POST":"GET"),headers:body?{"Content-Type":"application/json"}:undefined,body:body?JSON.stringify(body):undefined,credentials:"same-origin"});
+  if(!r.ok)throw new Error(r.status);
+  return r.json();
+}
+async function refresh(){
+  try{
+    const s=await api("/api/state");
+    done=new Set(s.done); colors=s.colors||{}; notes=s.notes||[]; notifyOn=s.notifyOn||{}; loaded=true; note=""; render();
+  }catch(e){note="Нет связи с сервером. Показаны последние данные.";render()}
+}
+function toggle(k,on,p){
+  on?done.add(k):done.delete(k); render();
+  api("/api/done",{key:k,on}).catch(()=>{note="Не удалось сохранить отметку.";refresh()});
+}
+function overdue(d,t){
+  if(iso(d)!==iso(today))return false;
+  return new Date().getHours()>=(DEADLINE[t]||DEFAULT_DEADLINE);
+}
+function taskRows(d,p,list){
+  const ok=canTick(p);
+  return list.map(t=>{
+    const k=key(d,p,t), on=isDone(k);
+    return `<label class="task${on?" done":""}${ok?"":" locked"}"><input type="checkbox" data-k="${k}" data-p="${p}" ${on?"checked":""} ${ok?"":"disabled"}><span class="t">${TASKS[t][0]}${!on&&overdue(d,t)?'<span class="late">просрочено</span>':""}</span><span class="b">${TASKS[t][1]}</span></label>`;
+  }).join("");
+}
+function renderRole(){
+  const el=document.getElementById("role");
+  if(!me){el.innerHTML="";return}
+  let h=`<div class="panel"><div class="row">`;
+  if(parent())h+=`<span class="tag">Родитель: ${esc(me.name)}</span><span>Вы можете менять отметки всех и писать сообщения.</span>`;
+  else h+=`<span class="tag">Вы: <span class="pc" style="--h:${hueOf(me.person)}">${esc(me.name)}</span></span>`;
+  h+=`</div>`;
+  if(!parent())h+=`<h3 style="margin-top:10px">Цвет вашего имени</h3><div class="row">${HUES.map(x=>`<button class="sw pc" style="--h:${x}" data-hue="${x}" aria-label="Цвет ${x}" aria-pressed="${hueOf(me.person)===x}"></button>`).join("")}</div>`;
+  h+=`<h3 style="margin-top:10px">Уведомления</h3><div class="row"><button class="btn main" data-push="on" ${pushOn?"disabled":""}>${pushOn?"Включены на этом устройстве":"Включить уведомления"}</button>${pushOn?'<button class="btn" data-push="test">Проверить</button>':""}</div>${pushMsg?`<p class="status">${esc(pushMsg)}</p>`:""}</div>`;
+  el.innerHTML=h;
+}
+function parentSummary(){
+  const rows=assign(cur).map((list,p)=>{
+    const total=sumPts(list), got=list.filter(t=>isDone(key(cur,p,t))).reduce((s,t)=>s+TASKS[t][1],0);
+    const left=list.filter(t=>!isDone(key(cur,p,t))).map(t=>TASKS[t][0]);
+    const txt=got===total?"сделано всё, можно похвалить":got===0?"ничего не отмечено: "+left.join(", "):`${got} из ${total}, осталось: ${left.join(", ")}`;
+    return `<div><b class="pc" style="--h:${hueOf(p)}">${NAMES[p]}</b><span>${txt}</span></div>`;
+  }).join("");
+  return `<div class="panel"><h3>Сводка дня</h3><div class="sum">${rows}</div><p class="status">Сводка приходит родителям в 21:00.</p></div>`;
+}
+function childBanners(){
+  if(!me||parent())return "";
+  const mp=me.person; let h="";
+  notes.filter(n=>n.to===mp).sort((a,b)=>a.at-b.at).forEach(n=>{
+    h+=`<div class="msg"><div class="row"><span><b>Сообщение от родителя:</b> ${esc(n.text)}</span><button class="btn" data-seen="${esc(n.id)}">Понятно</button></div></div>`;
+  });
+  if(iso(cur)===iso(today)){
+    const left=assign(cur)[mp].filter(t=>!isDone(key(cur,mp,t))), hr=new Date().getHours();
+    if(left.length&&hr>=18) h+=`<div class="alert">${hr>=20?"Пора закончить. ":""}Осталось сделать: ${left.map(t=>TASKS[t][0]).join(", ")}.</div>`;
+  }
+  return h;
+}
+function renderToday(){
+  const a=assign(cur), isT=iso(cur)===iso(today);
+  let h=childBanners();
+  if(parent())h+=parentSummary();
+  h+=`<div class="bar"><button class="nbtn" data-nav="-1" aria-label="Предыдущий день">←</button>
+   <h2>${DAYS[dow(cur)]}, ${fmt(cur)}${isT?'<span class="today-pill">сегодня</span>':''}</h2>
+   ${isT?"":'<button class="nbtn" data-nav="0">К сегодняшнему дню</button>'}
+   <button class="nbtn" data-nav="1" aria-label="Следующий день">→</button></div><div class="grid">`;
+  a.forEach((list,p)=>{
+    const total=sumPts(list), got=list.filter(t=>isDone(key(cur,p,t))).reduce((s,t)=>s+TASKS[t][1],0);
+    let extra="";
+    if(parent()){
+      const ns=notes.filter(n=>n.to===p).sort((x,y)=>y.at-x.at).slice(0,3);
+      extra=ns.map(n=>`<div class="note-line"><span>${esc(n.text)}</span><button class="btn" data-delnote="${esc(n.id)}" aria-label="Удалить сообщение">×</button></div>`).join("")
+        +`<form class="note-form" data-note="${p}"><input type="text" id="note-${p}" maxlength="200" placeholder="Написать: ${NAMES[p]}" aria-label="Сообщение для ${NAMES[p]}"><button class="btn main" type="submit">Отправить</button></form>`;
+      if(!notifyOn[p])extra=`<p class="status">${NAMES[p]} ещё не включил(а) уведомления.</p>`+extra;
+    }
+    h+=`<section class="card"><div class="who"><span class="name pc" style="--h:${hueOf(p)}">${NAMES[p]}</span><span class="pts">${got} из ${total} баллов</span></div>
+      <div class="meter pc" style="--h:${hueOf(p)}"><i style="width:${got/total*100}%"></i></div>${taskRows(cur,p,list)}${extra}</section>`;
+  });
+  return h+`</div><p class="status">${note}</p>`;
+}
+function renderWeek(){
+  const m=monday(cur);
+  let h=`<div class="bar"><button class="nbtn" data-wk="-1" aria-label="Предыдущая неделя">←</button>
+   <h2>Неделя ${fmt(m)} – ${fmt(addDays(m,6))}</h2>
+   <button class="nbtn" data-wk="0">Эта неделя</button><button class="nbtn" data-wk="1" aria-label="Следующая неделя">→</button></div>
+   <div class="scroll"><table><thead><tr><th>День</th>${NAMES.map((n,p)=>`<th><span class="hd pc" style="--h:${hueOf(p)}"><i class="dot"></i>${n}</span></th>`).join("")}</tr></thead><tbody>`;
+  for(let i=0;i<7;i++){
+    const d=addDays(m,i), a=assign(d), now=iso(d)===iso(today);
+    h+=`<tr class="${now?"now":""}"><td class="day">${SHORT[i]}<small>${fmt(d)}${now?" · сегодня":""}</small></td>`;
+    a.forEach((list,p)=>{
+      h+="<td>"+list.map(t=>{const on=isDone(key(d,p,t));
+        return `<span class="chip pc pcs" style="--h:${hueOf(p)};${on?"text-decoration:line-through;opacity:.6":""}">${TASKS[t][0]}<b>${TASKS[t][1]}</b></span>`}).join("")+"</td>";
+    });
+    h+="</tr>";
+  }
+  return h+`</tbody></table></div><p class="note">Число рядом с заданием показывает баллы. Каждый человек получает ровно 6 баллов в день. Каждый день наборы заданий сдвигаются на одного человека, и через 4 дня каждый успевает сделать всё по разу. Мытьё раковин и туалета, бельё, холодильник и пылесос идут раз в 4 дня.</p>`;
+}
+function renderRules(){
+  const rows=ORDER.map(t=>`<tr><td>${TASKS[t][0]}</td><td class="n">${TASKS[t][1]}</td><td>${FREQ[t][0]}</td><td>${FREQ[t][1]}</td></tr>`).join("");
+  const tot=CYCLE.flat().reduce((s,g)=>s+sumPts(g),0);
+  return `<div class="bar"><h2>Задания и баллы</h2></div><div class="scroll rules"><table><thead><tr><th>Задание</th><th>Баллы</th><th>Кто делает</th><th>Как часто</th></tr></thead><tbody>${rows}</tbody></table></div>
+   <p class="note">Баллы указаны на каждого человека. Мусор и вода делаются вдвоём, и оба получают полные баллы. Мусор выносят каждый день, воду приносят через день. Посуда: 3 балла утром и 3 балла после обеда. За 4 дня набирается ${tot} баллов: 4 человека × 6 баллов × 4 дня.</p>`;
+}
+function render(){
+  const a=document.activeElement, el=document.getElementById("view");
+  if(a&&a.tagName==="INPUT"&&a.type==="text"&&el.contains(a)){pending=true;return}
+  pending=false;
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===view));
+  if(!me){document.getElementById("role").innerHTML="";el.innerHTML=loaded?`<div class="panel"><h3>Нужна личная ссылка</h3><p>Откройте ссылку, которую вам прислал родитель. Она открывается один раз, дальше вход запоминается.</p></div>`:`<p class="status">Загрузка…</p>`;return}
+  renderRole();
+  el.innerHTML=view==="today"?renderToday():view==="week"?renderWeek():renderRules();
+}
+document.addEventListener("focusout",()=>{if(pending)setTimeout(render,0)});
+
+const b64=s=>{const p="=".repeat((4-s.length%4)%4),r=(s+p).replace(/-/g,"+").replace(/_/g,"/"),raw=atob(r);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))};
+async function enablePush(){
+  if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window)){
+    pushMsg="Этот браузер не поддерживает уведомления. На iPhone откройте меню «Поделиться», выберите «На экран Домой» и запустите приложение оттуда.";return}
+  const perm=await Notification.requestPermission();
+  if(perm!=="granted"){pushMsg="Уведомления запрещены. Разрешите их в настройках браузера для этого сайта.";return}
+  const reg=await navigator.serviceWorker.register("/sw.js"); await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(vapid)});
+  await api("/api/push/subscribe",{subscription:sub.toJSON()});
+  pushOn=true;pushMsg="Уведомления включены на этом устройстве.";
+}
+document.addEventListener("click",async e=>{
+  const t=e.target.closest(".tab"); if(t){view=t.dataset.v;try{localStorage.setItem("view",view)}catch(x){}render();return}
+  const n=e.target.closest("[data-nav]"); if(n){const v=+n.dataset.nav;cur=v===0?new Date(today):addDays(cur,v);render();return}
+  const w=e.target.closest("[data-wk]"); if(w){const v=+w.dataset.wk;cur=v===0?new Date(today):addDays(cur,7*v);render();return}
+  const hu=e.target.closest("[data-hue]"); if(hu&&me&&!parent()){colors[me.person]=+hu.dataset.hue;render();api("/api/color",{hue:+hu.dataset.hue}).catch(()=>refresh());return}
+  const s=e.target.closest("[data-seen]"); if(s){notes=notes.filter(x=>x.id!==s.dataset.seen);render();api("/api/notes/"+encodeURIComponent(s.dataset.seen)+"/seen",{}).catch(()=>{});return}
+  const dn=e.target.closest("[data-delnote]"); if(dn){notes=notes.filter(x=>x.id!==dn.dataset.delnote);render();api("/api/notes/"+encodeURIComponent(dn.dataset.delnote),null,"DELETE").catch(()=>refresh());return}
+  const pu=e.target.closest("[data-push]");
+  if(pu){
+    try{ if(pu.dataset.push==="on")await enablePush(); else {const r=await api("/api/push/test",{});pushMsg=r.devices?"Тестовое уведомление отправлено.":"Нет подписанных устройств."} }
+    catch(err){pushMsg="Не удалось включить уведомления."}
+    render();
+  }
+});
+document.addEventListener("change",e=>{const k=e.target.dataset&&e.target.dataset.k;if(k)toggle(k,e.target.checked,+e.target.dataset.p)});
+document.addEventListener("submit",async e=>{
+  const f=e.target.closest("[data-note]"); if(!f)return; e.preventDefault();
+  const p=+f.dataset.note, inp=f.querySelector("input"), text=inp.value.trim(); if(!text)return;
+  try{await api("/api/notes",{to:p,text});inp.value="";inp.blur();refresh()}catch(err){note="Не удалось отправить сообщение.";render()}
+});
+(async()=>{
+  try{
+    const m=await api("/api/me"); me=m.user; vapid=m.vapid||""; pushOn=!!m.subscribed&&("Notification" in window)&&Notification.permission==="granted";
+    loaded=true; render();
+    if(me){
+      await refresh(); setInterval(refresh,8000);
+      document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
+      if("serviceWorker" in navigator&&pushOn)navigator.serviceWorker.register("/sw.js").catch(()=>{});
+    }
+  }catch(e){loaded=true;note="Нет связи с сервером.";render()}
+})();
+setInterval(()=>{if(iso(new Date())===iso(today))render()},5*60*1000);
+</script>
+</body></html>
