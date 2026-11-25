@@ -3,15 +3,16 @@ main = "src/worker.js"
 compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
 
-[assets]
-directory = "./public"
-binding = "ASSETS"
-run_worker_first = ["/api/*"]
+[[durable_objects.bindings]]
+name = "FAMILY"
+class_name = "Family"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "domashnie-dela"
-database_id = "00000000-0000-0000-0000-000000000000"
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Family"]
 
 [triggers]
 crons = ["*/5 * * * *"]
+
+[vars]
+SUBJECT = "https://domashnie-dela.dela-48242f.workers.dev"
