@@ -70,6 +70,11 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 .task span.t{flex:1;min-width:0}
 .task .b{font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;flex:none}
 .task.done span.t{text-decoration:line-through;color:var(--muted)}
+.carry{font-size:12px;font-weight:600;color:var(--muted);margin:10px 6px 2px;text-transform:uppercase;letter-spacing:.04em}
+.from{font-size:12px;color:var(--muted);margin-left:6px}
+.card.mine{border:2px solid hsl(var(--h) 62% var(--pl))}
+.mine-tag{font-size:12px;font-weight:600;margin-left:8px}
+.sw[disabled]{opacity:.25;cursor:not-allowed}
 .late{display:inline-block;margin-left:6px;font-size:11px;font-weight:600;color:var(--warn);background:var(--warn-soft);padding:1px 6px;border-radius:6px}
 .alert{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-weight:500}
 .msg{background:var(--accent-soft);border-radius:10px;padding:10px 12px;margin-bottom:14px}
@@ -104,15 +109,15 @@ tr.now td.day{box-shadow:inset 3px 0 0 var(--accent)}
 <div class="wrap">
 <header>
   <h1>Домашние дела</h1>
-  <p class="sub">Четыре человека, по 6 баллов в день каждому. Наборы заданий переходят к следующему человеку каждый день.</p>
+  <p class="sub">Четыре человека, по 5 баллов в день каждому. Наборы заданий переходят к следующему человеку каждый день.</p>
 </header>
 <nav class="tabs" role="tablist" aria-label="Разделы">
   <button class="tab" role="tab" id="tab-today" aria-selected="true" data-v="today">Сегодня</button>
   <button class="tab" role="tab" id="tab-week" aria-selected="false" data-v="week">Неделя</button>
   <button class="tab" role="tab" id="tab-rules" aria-selected="false" data-v="rules">Задания и баллы</button>
 </nav>
-<div id="role"></div>
 <main id="view"></main>
+<div id="role" style="margin-top:20px"></div>
 </div>
 
 
@@ -153,13 +158,23 @@ function overdue(d,t){
   if(iso(d)!==iso(today))return false;
   return new Date().getHours()>=(DEADLINE[t]||DEFAULT_DEADLINE);
 }
-function taskRows(d,p,list){
-  const ok=canTick(p);
-  return list.map(t=>{
-    const k=key(d,p,t), on=isDone(k);
-    return `<label class="task${on?" done":""}${ok?"":" locked"}"><input type="checkbox" data-k="${k}" data-p="${p}" ${on?"checked":""} ${ok?"":"disabled"}><span class="t">${TASKS[t][0]}${!on&&overdue(d,t)?'<span class="late">просрочено</span>':""}</span><span class="b">${TASKS[t][1]}</span></label>`;
-  }).join("");
+// дела человека на день: свои и перенесённые с прошлых дней (только на сегодня)
+function itemsFor(d,p){
+  const own=assign(d)[p].map(t=>({t,k:key(d,p,t)}));
+  const car=iso(d)===iso(today)?carried(done,d,p).map(c=>({t:c.t,k:c.key,from:c.o})):[];
+  return {own,car};
 }
+const pts=l=>l.reduce((s,x)=>s+TASKS[x.t][1],0);
+function taskRows(d,p){
+  const ok=canTick(p), it=itemsFor(d,p);
+  const row=x=>{
+    const on=isDone(x.k);
+    const tag=x.from?`<span class="from">с ${x.from.getDate()} ${MONTHS[x.from.getMonth()]}</span>`:(!on&&overdue(d,x.t)?'<span class="late">просрочено</span>':"");
+    return `<label class="task${on?" done":""}${ok?"":" locked"}"><input type="checkbox" data-k="${x.k}" data-p="${p}" ${on?"checked":""} ${ok?"":"disabled"}><span class="t">${TASKS[x.t][0]}${tag}</span><span class="b">${TASKS[x.t][1]}</span></label>`;
+  };
+  return it.own.map(row).join("")+(it.car.length?`<div class="carry">Перенесено с прошлых дней</div>`+it.car.map(row).join(""):"");
+}
+const takenHues=()=>{const s=new Set();[0,1,2,3].forEach(i=>{if(me&&i!==me.person)s.add(hueOf(i))});return s};
 function renderRole(){
   const el=document.getElementById("role");
   if(!me){el.innerHTML="";return}
@@ -167,15 +182,15 @@ function renderRole(){
   if(parent())h+=`<span class="tag">Вы: родитель</span><span>Можно менять отметки всех и писать сообщения.</span>`;
   else h+=`<span class="tag">Вы: <span class="pc" style="--h:${hueOf(me.person)}">${esc(me.name)}</span></span>`;
   h+=`<button class="btn" data-switch="1">Сменить</button></div>`;
-  if(!parent())h+=`<h3 style="margin-top:10px">Цвет вашего имени</h3><div class="row">${HUES.map(x=>`<button class="sw pc" style="--h:${x}" data-hue="${x}" aria-label="Цвет ${x}" aria-pressed="${hueOf(me.person)===x}"></button>`).join("")}</div>`;
+  if(!parent()){const tk=takenHues();h+=`<h3 style="margin-top:10px">Цвет вашего имени</h3><div class="row">${HUES.map(x=>`<button class="sw pc" style="--h:${x}" data-hue="${x}" aria-label="Цвет" aria-pressed="${hueOf(me.person)===x}" ${tk.has(x)?"disabled":""}></button>`).join("")}</div><p class="status">Серые кружки уже выбрали другие.</p>`}
   h+=`<h3 style="margin-top:10px">Уведомления</h3><div class="row"><button class="btn main" data-push="on" ${pushOn?"disabled":""}>${pushOn?"Включены на этом устройстве":"Включить уведомления"}</button>${pushOn?'<button class="btn" data-push="test">Проверить</button>':""}</div>${pushMsg?`<p class="status">${esc(pushMsg)}</p>`:""}</div>`;
   el.innerHTML=h;
 }
 function parentSummary(){
-  const rows=assign(cur).map((list,p)=>{
-    const total=sumPts(list), got=list.filter(t=>isDone(key(cur,p,t))).reduce((s,t)=>s+TASKS[t][1],0);
-    const left=list.filter(t=>!isDone(key(cur,p,t))).map(t=>TASKS[t][0]);
-    const txt=got===total?"сделано всё, можно похвалить":got===0?"ничего не отмечено: "+left.join(", "):`${got} из ${total}, осталось: ${left.join(", ")}`;
+  const rows=NAMES.map((_,p)=>{
+    const it=itemsFor(cur,p), all=it.own.concat(it.car), total=pts(all), left=all.filter(x=>!isDone(x.k)), got=total-pts(left);
+    const names=left.map(x=>TASKS[x.t][0]);
+    const txt=got===total?"сделано всё, можно похвалить":got===0?"ничего не отмечено: "+names.join(", "):`${got} из ${total}, осталось: ${names.join(", ")}`;
     return `<div><b class="pc" style="--h:${hueOf(p)}">${NAMES[p]}</b><span>${txt}</span></div>`;
   }).join("");
   return `<div class="panel"><h3>Сводка дня</h3><div class="sum">${rows}</div><p class="status">Сводка приходит родителям в 21:00.</p></div>`;
@@ -187,21 +202,23 @@ function childBanners(){
     h+=`<div class="msg"><div class="row"><span><b>Сообщение от родителя:</b> ${esc(n.text)}</span><button class="btn" data-seen="${esc(n.id)}">Понятно</button></div></div>`;
   });
   if(iso(cur)===iso(today)){
-    const left=assign(cur)[mp].filter(t=>!isDone(key(cur,mp,t))), hr=new Date().getHours();
-    if(left.length&&hr>=18) h+=`<div class="alert">${hr>=20?"Пора закончить. ":""}Осталось сделать: ${left.map(t=>TASKS[t][0]).join(", ")}.</div>`;
+    const it=itemsFor(cur,mp), left=it.own.concat(it.car).filter(x=>!isDone(x.k)), hr=new Date().getHours();
+    if(left.length&&hr>=18) h+=`<div class="alert">${hr>=20?"Пора закончить. ":""}Осталось сделать: ${left.map(x=>TASKS[x.t][0]).join(", ")}.</div>`;
   }
   return h;
 }
 function renderToday(){
-  const a=assign(cur), isT=iso(cur)===iso(today);
+  const isT=iso(cur)===iso(today);
   let h=childBanners();
   if(parent())h+=parentSummary();
   h+=`<div class="bar"><button class="nbtn" data-nav="-1" aria-label="Предыдущий день">←</button>
    <h2>${DAYS[dow(cur)]}, ${fmt(cur)}${isT?'<span class="today-pill">сегодня</span>':''}</h2>
    ${isT?"":'<button class="nbtn" data-nav="0">К сегодняшнему дню</button>'}
    <button class="nbtn" data-nav="1" aria-label="Следующий день">→</button></div><div class="grid">`;
-  a.forEach((list,p)=>{
-    const total=sumPts(list), got=list.filter(t=>isDone(key(cur,p,t))).reduce((s,t)=>s+TASKS[t][1],0);
+  const order=[0,1,2,3]; if(me&&!parent()){order.splice(order.indexOf(me.person),1);order.unshift(me.person)}
+  order.forEach(p=>{
+    const it=itemsFor(cur,p), all=it.own.concat(it.car), total=pts(all), got=pts(all.filter(x=>isDone(x.k)));
+    const mine=me&&!parent()&&me.person===p;
     let extra="";
     if(parent()){
       const ns=notes.filter(n=>n.to===p).sort((x,y)=>y.at-x.at).slice(0,3);
@@ -209,8 +226,8 @@ function renderToday(){
         +`<form class="note-form" data-note="${p}"><input type="text" id="note-${p}" maxlength="200" placeholder="Написать: ${NAMES[p]}" aria-label="Сообщение для ${NAMES[p]}"><button class="btn main" type="submit">Отправить</button></form>`;
       if(!notifyOn[p])extra=`<p class="status">${NAMES[p]} ещё не включил(а) уведомления.</p>`+extra;
     }
-    h+=`<section class="card"><div class="who"><span class="name pc" style="--h:${hueOf(p)}">${NAMES[p]}</span><span class="pts">${got} из ${total} баллов</span></div>
-      <div class="meter pc" style="--h:${hueOf(p)}"><i style="width:${got/total*100}%"></i></div>${taskRows(cur,p,list)}${extra}</section>`;
+    h+=`<section class="card${mine?" mine":""}" style="--h:${hueOf(p)}"><div class="who"><span class="name pc" style="--h:${hueOf(p)}">${NAMES[p]}${mine?'<span class="mine-tag">ваши дела</span>':""}</span><span class="pts">${got} из ${total} баллов</span></div>
+      <div class="meter pc" style="--h:${hueOf(p)}"><i style="width:${total?got/total*100:0}%"></i></div>${taskRows(cur,p)}${extra}</section>`;
   });
   return h+`</div><p class="status">${note}</p>`;
 }
@@ -229,13 +246,13 @@ function renderWeek(){
     });
     h+="</tr>";
   }
-  return h+`</tbody></table></div><p class="note">Число рядом с заданием показывает баллы. Каждый человек получает ровно 6 баллов в день. Каждый день наборы заданий сдвигаются на одного человека, и через 4 дня каждый успевает сделать всё по разу. Мытьё раковин и туалета, бельё, холодильник и пылесос идут раз в 4 дня.</p>`;
+  return h+`</tbody></table></div><p class="note">Число рядом с заданием показывает баллы. Каждый человек получает ровно 5 баллов в день. Каждый день наборы заданий сдвигаются на одного человека, и через 4 дня каждый успевает сделать всё по разу. Мытьё раковин и туалета, бельё, холодильник и пылесос идут раз в 4 дня.</p>`;
 }
 function renderRules(){
   const rows=ORDER.map(t=>`<tr><td>${TASKS[t][0]}</td><td class="n">${TASKS[t][1]}</td><td>${FREQ[t][0]}</td><td>${FREQ[t][1]}</td></tr>`).join("");
   const tot=CYCLE.flat().reduce((s,g)=>s+sumPts(g),0);
   return `<div class="bar"><h2>Задания и баллы</h2></div><div class="scroll rules"><table><thead><tr><th>Задание</th><th>Баллы</th><th>Кто делает</th><th>Как часто</th></tr></thead><tbody>${rows}</tbody></table></div>
-   <p class="note">Баллы указаны на каждого человека. Мусор и вода делаются вдвоём, и оба получают полные баллы. Мусор выносят каждый день, воду приносят через день. Посуда: 3 балла утром и 3 балла после обеда. За 4 дня набирается ${tot} баллов: 4 человека × 6 баллов × 4 дня.</p>`;
+   <p class="note">Баллы указаны на каждого человека. Мусор и вода делаются вдвоём, и оба получают полные баллы. Мусор выносят каждый день, воду приносят через день. Посуда: 3 балла утром и 3 балла после обеда. За 4 дня набирается ${tot} баллов: 4 человека × ${tot/16} баллов × 4 дня.</p>`;
 }
 function render(){
   const a=document.activeElement, el=document.getElementById("view");

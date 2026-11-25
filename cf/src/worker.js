@@ -65,15 +65,18 @@ export class Family extends DurableObject {
     return ok;
   }
 
+  // дела на сегодня: свои и перенесённые с прошлых дней
   dayStatus(d) {
-    const ds = S.iso(d);
-    const done = new Set(this.q("SELECT key FROM done WHERE key >= ? AND key < ?", ds + "_", ds + "`").map(r => r.key));
+    const done = new Set(this.q("SELECT key FROM done WHERE key >= ?", S.iso(S.addDays(d, -8))).map(r => r.key));
     return S.assign(d).map((list, p) => {
-      const left = list.filter(t => !done.has(S.key(d, p, t)));
-      const total = S.sumPts(list);
+      const car = S.carried(done, d, p).map(c => c.t);
+      const all = list.concat(car);
+      const left = list.filter(t => !done.has(S.key(d, p, t))).concat(car);
+      const total = S.sumPts(all);
       return { p, total, got: total - S.sumPts(left), left };
     });
   }
+  hueOf(p) { const r = this.q("SELECT hue FROM colors WHERE person=?", p)[0]; return r ? r.hue : S.DEFHUE[p]; }
 
   // вызывается по расписанию каждые 5 минут
   async tick() {
@@ -138,6 +141,7 @@ export class Family extends DurableObject {
       if (parent) return json({ error: "forbidden" }, 403);
       const hue = Number(body.hue);
       if (!S.HUES.includes(hue)) return json({ error: "bad_hue" }, 400);
+      if ([0, 1, 2, 3].some(i => i !== person && this.hueOf(i) === hue)) return json({ error: "taken" }, 409);
       this.q("INSERT OR REPLACE INTO colors (person,hue) VALUES (?,?)", person, hue);
       return json({ ok: true });
     }
