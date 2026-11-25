@@ -123,19 +123,26 @@ let me=null, vapid="", done=new Set(), colors={}, notes=[], notifyOn={}, note=""
 let view="today", cur=new Date(); cur=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate());
 const today=new Date(cur);
 try{const v=localStorage.getItem("view"); if(["today","week","rules"].includes(v)) view=v}catch(e){}
+const IDS=["k0","k1","k2","k3","parent"];
+function setMe(id){
+  try{localStorage.setItem("who",id||"")}catch(e){}
+  me=id?(id==="parent"?{id,role:"parent",person:null,name:"Родитель"}:{id,role:"kid",person:+id.slice(1),name:NAMES[+id.slice(1)]}):null;
+}
+try{const w=localStorage.getItem("who"); if(IDS.includes(w))setMe(w)}catch(e){}
 const hueOf=p=>typeof colors[p]==="number"?colors[p]:DEFHUE[p];
 const isDone=k=>done.has(k);
 const parent=()=>me&&me.role==="parent";
 const canTick=p=>parent()||(me&&me.person===p);
 async function api(url,body,method){
-  const r=await fetch(url,{method:method||(body?"POST":"GET"),headers:body?{"Content-Type":"application/json"}:undefined,body:body?JSON.stringify(body):undefined,credentials:"same-origin"});
+  const headers={"X-Who":me?me.id:""}; if(body)headers["Content-Type"]="application/json";
+  const r=await fetch(url,{method:method||(body?"POST":"GET"),headers,body:body?JSON.stringify(body):undefined});
   if(!r.ok)throw new Error(r.status);
   return r.json();
 }
 async function refresh(){
   try{
     const s=await api("/api/state");
-    done=new Set(s.done); colors=s.colors||{}; notes=s.notes||[]; notifyOn=s.notifyOn||{}; loaded=true; note=""; render();
+    done=new Set(s.done); colors=s.colors||{}; notes=s.notes||[]; notifyOn=s.notifyOn||{}; vapid=s.vapid||vapid; pushOn=!!s.subscribed&&("Notification" in window)&&Notification.permission==="granted"; loaded=true; note=""; render();
   }catch(e){note="Нет связи с сервером. Показаны последние данные.";render()}
 }
 function toggle(k,on,p){
@@ -157,9 +164,9 @@ function renderRole(){
   const el=document.getElementById("role");
   if(!me){el.innerHTML="";return}
   let h=`<div class="panel"><div class="row">`;
-  if(parent())h+=`<span class="tag">Родитель: ${esc(me.name)}</span><span>Вы можете менять отметки всех и писать сообщения.</span>`;
+  if(parent())h+=`<span class="tag">Вы: родитель</span><span>Можно менять отметки всех и писать сообщения.</span>`;
   else h+=`<span class="tag">Вы: <span class="pc" style="--h:${hueOf(me.person)}">${esc(me.name)}</span></span>`;
-  h+=`</div>`;
+  h+=`<button class="btn" data-switch="1">Сменить</button></div>`;
   if(!parent())h+=`<h3 style="margin-top:10px">Цвет вашего имени</h3><div class="row">${HUES.map(x=>`<button class="sw pc" style="--h:${x}" data-hue="${x}" aria-label="Цвет ${x}" aria-pressed="${hueOf(me.person)===x}"></button>`).join("")}</div>`;
   h+=`<h3 style="margin-top:10px">Уведомления</h3><div class="row"><button class="btn main" data-push="on" ${pushOn?"disabled":""}>${pushOn?"Включены на этом устройстве":"Включить уведомления"}</button>${pushOn?'<button class="btn" data-push="test">Проверить</button>':""}</div>${pushMsg?`<p class="status">${esc(pushMsg)}</p>`:""}</div>`;
   el.innerHTML=h;
@@ -235,7 +242,7 @@ function render(){
   if(a&&a.tagName==="INPUT"&&a.type==="text"&&el.contains(a)){pending=true;return}
   pending=false;
   document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===view));
-  if(!me){document.getElementById("role").innerHTML="";el.innerHTML=loaded?`<div class="panel"><h3>Нужна личная ссылка</h3><p>Откройте ссылку, которую вам прислал родитель. Она открывается один раз, дальше вход запоминается.</p></div>`:`<p class="status">Загрузка…</p>`;return}
+  if(!me){document.getElementById("role").innerHTML="";el.innerHTML=`<div class="panel"><h3>Как вас зовут?</h3><div class="row">${NAMES.map((n,i)=>`<button class="btn main" data-who="k${i}">${n}</button>`).join("")}<button class="btn" data-who="parent">Я родитель</button></div></div>`;return}
   renderRole();
   el.innerHTML=view==="today"?renderToday():view==="week"?renderWeek():renderRules();
 }
@@ -254,6 +261,8 @@ async function enablePush(){
   pushOn=true;pushMsg="Уведомления включены на этом устройстве.";
 }
 document.addEventListener("click",async e=>{
+  const wb=e.target.closest("[data-who]"); if(wb){setMe(wb.dataset.who);boot();return}
+  if(e.target.closest("[data-switch]")){setMe("");done=new Set();notes=[];render();return}
   const t=e.target.closest(".tab"); if(t){view=t.dataset.v;try{localStorage.setItem("view",view)}catch(x){}render();return}
   const n=e.target.closest("[data-nav]"); if(n){const v=+n.dataset.nav;cur=v===0?new Date(today):addDays(cur,v);render();return}
   const w=e.target.closest("[data-wk]"); if(w){const v=+w.dataset.wk;cur=v===0?new Date(today):addDays(cur,7*v);render();return}
@@ -273,17 +282,16 @@ document.addEventListener("submit",async e=>{
   const p=+f.dataset.note, inp=f.querySelector("input"), text=inp.value.trim(); if(!text)return;
   try{await api("/api/notes",{to:p,text});inp.value="";inp.blur();refresh()}catch(err){note="Не удалось отправить сообщение.";render()}
 });
-(async()=>{
-  try{
-    const m=await api("/api/me"); me=m.user; vapid=m.vapid||""; pushOn=!!m.subscribed&&("Notification" in window)&&Notification.permission==="granted";
-    loaded=true; render();
-    if(me){
-      await refresh(); setInterval(refresh,8000);
-      document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
-      if("serviceWorker" in navigator&&pushOn)navigator.serviceWorker.register("/sw.js").catch(()=>{});
-    }
-  }catch(e){loaded=true;note="Нет связи с сервером.";render()}
-})();
+let timer=null;
+function boot(){
+  loaded=true; render();
+  if(timer){clearInterval(timer);timer=null}
+  if(!me)return;
+  refresh(); timer=setInterval(()=>{if(!document.hidden)refresh()},20000);
+  if("serviceWorker" in navigator&&pushOn)navigator.serviceWorker.register("/sw.js").catch(()=>{});
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&me)refresh()});
+boot();
 setInterval(()=>{if(iso(new Date())===iso(today))render()},5*60*1000);
 </script>
 </body></html>
