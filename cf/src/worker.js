@@ -56,7 +56,7 @@ export class Family extends DurableObject {
     let ok = 0;
     for (const s of subs) {
       try {
-        const req = await buildPushPayload({ data: JSON.stringify(payload), options: { ttl: 6 * 3600 } },
+        const req = await buildPushPayload({ data: JSON.stringify(payload), options: { ttl: 6 * 3600, urgency: "high" } },
           { endpoint: s.endpoint, expirationTime: null, keys: { p256dh: s.p256dh, auth: s.auth } }, v);
         const r = await fetch(s.endpoint, req);
         if (r.status === 404 || r.status === 410) this.q("DELETE FROM subs WHERE endpoint=?", s.endpoint);
