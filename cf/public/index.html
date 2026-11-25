@@ -199,7 +199,8 @@ function childBanners(){
   if(!me||parent())return "";
   const mp=me.person; let h="";
   notes.filter(n=>n.to===mp).sort((a,b)=>a.at-b.at).forEach(n=>{
-    h+=`<div class="msg"><div class="row"><span><b>Сообщение от родителя:</b> ${esc(n.text)}</span><button class="btn" data-seen="${esc(n.id)}">Понятно</button></div></div>`;
+    const fr=n.from&&n.from!=="parent"?"от "+NAMES[+n.from.slice(1)]:"от родителя";
+    h+=`<div class="msg"><div class="row"><span><b>Сообщение ${fr}:</b> ${esc(n.text)}</span><button class="btn" data-seen="${esc(n.id)}">Понятно</button></div></div>`;
   });
   if(iso(cur)===iso(today)){
     const it=itemsFor(cur,mp), left=it.own.concat(it.car).filter(x=>!isDone(x.k)), hr=new Date().getHours();
@@ -220,11 +221,11 @@ function renderToday(){
     const it=itemsFor(cur,p), all=it.own.concat(it.car), total=pts(all), got=pts(all.filter(x=>isDone(x.k)));
     const mine=me&&!parent()&&me.person===p;
     let extra="";
-    if(parent()){
-      const ns=notes.filter(n=>n.to===p).sort((x,y)=>y.at-x.at).slice(0,3);
+    if(parent()||!mine){
+      const ns=parent()?notes.filter(n=>n.to===p).sort((x,y)=>y.at-x.at).slice(0,3):[];
       extra=ns.map(n=>`<div class="note-line"><span>${esc(n.text)}</span><button class="btn" data-delnote="${esc(n.id)}" aria-label="Удалить сообщение">×</button></div>`).join("")
         +`<form class="note-form" data-note="${p}"><input type="text" id="note-${p}" maxlength="200" placeholder="Написать: ${NAMES[p]}" aria-label="Сообщение для ${NAMES[p]}"><button class="btn main" type="submit">Отправить</button></form>`;
-      if(!notifyOn[p])extra=`<p class="status">${NAMES[p]} ещё не включил(а) уведомления.</p>`+extra;
+      if(parent()&&!notifyOn[p])extra=`<p class="status">${NAMES[p]} ещё не включил(а) уведомления.</p>`+extra;
     }
     h+=`<section class="card${mine?" mine":""}" style="--h:${hueOf(p)}"><div class="who"><span class="name pc" style="--h:${hueOf(p)}">${NAMES[p]}${mine?'<span class="mine-tag">ваши дела</span>':""}</span><span class="pts">${got} из ${total} баллов</span></div>
       <div class="meter pc" style="--h:${hueOf(p)}"><i style="width:${total?got/total*100:0}%"></i></div>${taskRows(cur,p)}${extra}</section>`;

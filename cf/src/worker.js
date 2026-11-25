@@ -33,6 +33,7 @@ export class Family extends DurableObject {
       "CREATE TABLE IF NOT EXISTS sent (k TEXT PRIMARY KEY)",
       "CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT)"
     ]) this.sql.exec(q);
+    try { this.sql.exec("ALTER TABLE notes ADD COLUMN from_w TEXT"); } catch (e) { /* колонка уже есть */ }
   }
   q(query, ...b) { return this.sql.exec(query, ...b).toArray(); }
 
@@ -116,12 +117,12 @@ export class Family extends DurableObject {
     if (path === "/api/state" && m === "GET") {
       const from = S.iso(S.addDays(todayDate(), -45));
       const have = Object.fromEntries(this.q("SELECT who, COUNT(*) c FROM subs GROUP BY who").map(r => [r.who, r.c > 0]));
-      const notes = parent ? this.q("SELECT id,to_p,text,at FROM notes ORDER BY at DESC LIMIT 40")
-                           : this.q("SELECT id,to_p,text,at FROM notes WHERE to_p=? AND seen=0 ORDER BY at", person);
+      const notes = parent ? this.q("SELECT id,to_p,text,at,from_w FROM notes ORDER BY at DESC LIMIT 40")
+                           : this.q("SELECT id,to_p,text,at,from_w FROM notes WHERE to_p=? AND seen=0 ORDER BY at", person);
       return json({
         done: this.q("SELECT key FROM done WHERE key >= ?", from).map(r => r.key),
         colors: Object.fromEntries(this.q("SELECT person,hue FROM colors").map(r => [r.person, r.hue])),
-        notes: notes.map(r => ({ id: r.id, to: r.to_p, text: r.text, at: r.at })),
+        notes: notes.map(r => ({ id: r.id, to: r.to_p, text: r.text, at: r.at, from: r.from_w || "parent" })),
         notifyOn: parent ? Object.fromEntries([0, 1, 2, 3].map(i => [i, !!have["k" + i]])) : undefined,
         subscribed: !!have[who],
         vapid: (await this.vapid()).publicKey
@@ -146,12 +147,13 @@ export class Family extends DurableObject {
       return json({ ok: true });
     }
     if (path === "/api/notes" && m === "POST") {
-      if (!parent) return json({ error: "forbidden" }, 403);
       const to = Number(body.to), text = String(body.text || "").trim().slice(0, 200);
       if (!(to >= 0 && to <= 3) || !text) return json({ error: "bad_note" }, 400);
+      if (!parent && to === person) return json({ error: "forbidden" }, 403);
+      if (!parent && this.q("SELECT COUNT(*) c FROM notes WHERE from_w=? AND at>?", who, Date.now() - 3600000)[0].c >= 10) return json({ error: "too_many" }, 429);
       const id = rid();
-      this.q("INSERT INTO notes (id,to_p,text,at) VALUES (?,?,?,?)", id, to, text, Date.now());
-      await this.pushTo("k" + to, { title: "Сообщение от родителя", body: text, tag: "note-" + id });
+      this.q("INSERT INTO notes (id,to_p,text,at,from_w) VALUES (?,?,?,?,?)", id, to, text, Date.now(), who);
+      await this.pushTo("k" + to, { title: parent ? "Сообщение от родителя" : "Сообщение от " + S.NAMES[person], body: text, tag: "note-" + id });
       return json({ ok: true });
     }
     const nm = /^\/api\/notes\/([a-f0-9]+)(\/seen)?$/.exec(path);
