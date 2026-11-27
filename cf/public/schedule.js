@@ -16,10 +16,10 @@ const DEADLINE={dishAM:13};
 const DEFAULT_DEADLINE=20;
 // Цикл из 4 дней. В каждом дне 4 набора по 6 баллов. Набор переходит к следующему человеку каждый день.
 const CYCLE=[
- [['dishAM','cook','bread'],['dishPM','sink'],['stove','vac','trash','laundry'],['table','trash','cat']],
- [['dishAM','cook','bread'],['dishPM','water','trash'],['table','stove'],['vac','water','trash','cat']],
- [['dishAM','cook','bread'],['dishPM','vac','trash'],['fridge','trash','cat'],['table','stove']],
- [['dishAM','cook','bread'],['dishPM','water','trash'],['table','stove'],['vac','water','trash','cat']]];
+ [['dishAM','cook','cat'],['dishPM','sink'],['stove','vac','trash','laundry'],['table','trash','bread']],
+ [['dishAM','cook','cat'],['dishPM','water','trash'],['table','stove'],['vac','water','trash','bread']],
+ [['dishAM','cook','cat'],['dishPM','vac','trash'],['fridge','trash','bread'],['table','stove']],
+ [['dishAM','cook','cat'],['dishPM','water','trash'],['table','stove'],['vac','water','trash','bread']]];
 const DAYS=["Понедельник","Вторник","Среда","Четверг","Пятница","Суббота","Воскресенье"];
 const SHORT=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
 const MONTHS=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
