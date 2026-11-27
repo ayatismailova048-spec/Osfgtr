@@ -134,6 +134,11 @@ export class Family extends DurableObject {
       const p = +k[4], t = k[5], d = new Date(+k[1], +k[2] - 1, +k[3]);
       if (!S.TASKS[t] || !S.assign(d)[p].includes(t)) return json({ error: "bad_task" }, 400);
       if (!parent && person !== p) return json({ error: "forbidden" }, 403);
+      if (body.on && !parent && S.iso(d) === S.iso(todayDate()) && S.assign(d)[p].includes(t)) {
+        const done = new Set(this.q("SELECT key FROM done WHERE key >= ?", S.iso(S.addDays(d, -8))).map(r => r.key));
+        const lock = S.lockedBy(done, d, p, t);
+        if (lock.length) return json({ error: "locked", by: lock.map(q => S.NAMES[q]) }, 409);
+      }
       if (body.on) this.q("INSERT OR REPLACE INTO done (key,by,at) VALUES (?,?,?)", body.key, who, Date.now());
       else this.q("DELETE FROM done WHERE key=?", body.key);
       return json({ ok: true });

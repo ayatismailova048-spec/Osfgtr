@@ -47,4 +47,10 @@ function carried(done,d,p){
   }
   return out;
 }
-if(typeof module!=="undefined")module.exports={NAMES,DEFHUE,HUES,TASKS,ORDER,FREQ,DEADLINE,DEFAULT_DEADLINE,CYCLE,DAYS,SHORT,MONTHS,REF,iso,addDays,dow,monday,dayN,fmt,assign,sumPts,key,CARRY_FROM,carried};
+// Своё дело на сегодня закрыто, пока другой человек не сделает такое же пропущенное дело
+function lockedBy(done,d,p,t){
+  const who=[];
+  for(let q=0;q<NAMES.length;q++) if(q!==p&&carried(done,d,q).some(c=>c.t===t)) who.push(q);
+  return who;
+}
+if(typeof module!=="undefined")module.exports={NAMES,DEFHUE,HUES,TASKS,ORDER,FREQ,DEADLINE,DEFAULT_DEADLINE,CYCLE,DAYS,SHORT,MONTHS,REF,iso,addDays,dow,monday,dayN,fmt,assign,sumPts,key,CARRY_FROM,carried,lockedBy};

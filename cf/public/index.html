@@ -160,7 +160,8 @@ function overdue(d,t){
 }
 // дела человека на день: свои и перенесённые с прошлых дней (только на сегодня)
 function itemsFor(d,p){
-  const own=assign(d)[p].map(t=>({t,k:key(d,p,t)}));
+  const isT=iso(d)===iso(today);
+  const own=assign(d)[p].map(t=>({t,k:key(d,p,t),lock:isT?lockedBy(done,d,p,t):[]}));
   const car=iso(d)===iso(today)?carried(done,d,p).map(c=>({t:c.t,k:c.key,from:c.o})):[];
   return {own,car};
 }
@@ -169,8 +170,9 @@ function taskRows(d,p){
   const ok=canTick(p), it=itemsFor(d,p);
   const row=x=>{
     const on=isDone(x.k);
-    const tag=x.from?`<span class="from">с ${x.from.getDate()} ${MONTHS[x.from.getMonth()]}</span>`:(!on&&overdue(d,x.t)?'<span class="late">просрочено</span>':"");
-    return `<label class="task${on?" done":""}${ok?"":" locked"}"><input type="checkbox" data-k="${x.k}" data-p="${p}" ${on?"checked":""} ${ok?"":"disabled"}><span class="t">${TASKS[x.t][0]}${tag}</span><span class="b">${TASKS[x.t][1]}</span></label>`;
+    const locked=!on&&x.lock&&x.lock.length>0&&!parent();
+    const tag=locked?`<span class="from">ждёт: сначала ${x.lock.map(q=>NAMES[q]).join(", ")} делает пропущенное</span>`:x.from?`<span class="from">с ${x.from.getDate()} ${MONTHS[x.from.getMonth()]}</span>`:(!on&&overdue(d,x.t)?'<span class="late">просрочено</span>':"");
+    return `<label class="task${on?" done":""}${ok&&!locked?"":" locked"}"><input type="checkbox" data-k="${x.k}" data-p="${p}" ${on?"checked":""} ${ok&&!locked?"":"disabled"}><span class="t">${TASKS[x.t][0]}${tag}</span><span class="b">${TASKS[x.t][1]}</span></label>`;
   };
   return it.own.map(row).join("")+(it.car.length?`<div class="carry">Перенесено с прошлых дней</div>`+it.car.map(row).join(""):"");
 }
